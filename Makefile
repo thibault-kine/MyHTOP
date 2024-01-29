@@ -1,4 +1,4 @@
-TARGET = myhtop.exe
+TARGET = my-htop.exe
 CC = gcc
 MAIN = ./main.c
 SRCS = $(MAIN)
