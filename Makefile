@@ -3,7 +3,7 @@ CC = gcc
 MAIN = ./main.c
 SRCS = $(MAIN)
 OBJS = $(SRCS:%.c=%.o)
-CFLAGS = -Wall -Wextra -Werror -lncurses
+CFLAGS = -Wall -Wextra -Werror -lncurses -g3
 
 all: $(TARGET)
 
