@@ -18,10 +18,8 @@
 
 int main() {
 
-
-
     WINDOW *w_main, *w_header, *w_body;
-    WINDOW *w_pid /*, *w_user, *w_status, *w_cpu, *w_mem, *w_time, *w_name */; 
+    WINDOW *w_pid, /* *w_user, *w_status, *w_cpu, *w_mem, *w_time, */ *w_name; 
     WINDOW *wl_pid, *wl_user, *wl_status, *wl_cpu, *wl_mem, *wl_time, *wl_name;
     initscr();
     start_color();
@@ -40,21 +38,28 @@ int main() {
         "The numbers, Mason! What do they mean?",
     };
     srand(time(NULL));
-    int arr_len = sizeof(SUB) / sizeof(SUB[0]);
-    int rand_id = 0 + rand() % (arr_len + 1 - 0);
-    const double HEADER_W = strlen(SUB[rand_id]) + 6;
+    unsigned int arr_len = sizeof(SUB) / sizeof(SUB[0]);
+    unsigned int rand_id = 0 + rand() % arr_len;
+    double header_w = 0;
+    if(rand_id < arr_len && SUB[rand_id] != NULL) {
+        header_w = strlen(SUB[rand_id]) + 6;
+    }
+    else {
+        header_w = 6;
+    }
 
     // CREATE SUBWINDOWS
     w_main = subwin(stdscr, LINES, COLS, 0, 0);
-    w_header = subwin(w_main, 5, HEADER_W, 0, (COLS - HEADER_W) / 2);
+    w_header = subwin(w_main, 5, header_w, 0, (COLS - header_w) / 2);
     w_body = subwin(w_main, LINES - 5, COLS, 5, 0);
 
-    int remaining_w;
+    int remaining_w = 0;
     int total_w = COLS - 1;
     int used_w = 7 * ((COLS / 10) - 2);
     remaining_w = total_w - used_w;
 
     w_pid = subwin(w_body, LINES - 5, COLS / 10, 5, 0);
+    w_name = subwin(w_body, LINES - 5, remaining_w + 2, 5, ((COLS / 10) * 6));
 
     wl_pid = subwin(w_body, 1, (COLS / 10) - 1, 6, 1);
     wl_user = subwin(w_body, 1, (COLS / 10) - 1, 6, (COLS / 10) + 1);
@@ -65,8 +70,8 @@ int main() {
     wl_name = subwin(w_body, 1, remaining_w, 6, ((COLS / 10) * 6) + 1);
 
     // PRINT THE TITLE + SUBTITLE
-    mvwprintw(w_header, 1, (HEADER_W - strlen(TITLE)) / 2, "%s", TITLE);
-    mvwprintw(w_header, 3, (HEADER_W - strlen(SUB[rand_id])) / 2, "%s", SUB[rand_id]);
+    mvwprintw(w_header, 1, (header_w - strlen(TITLE)) / 2, "%s", TITLE);
+    mvwprintw(w_header, 3, (header_w - strlen(SUB[rand_id])) / 2, "%s", SUB[rand_id]);
 
     // PRINT LABELS
     mvwprintw(wl_pid, 0, 1, "PID");
@@ -82,9 +87,11 @@ int main() {
     int pid_length = 0;
     int* pids = get_pids(&pid_length);
 
+    // For each PID
     if(pids != NULL) {
         for(int i = 0; i < pid_length; i++) {
             mvwprintw(w_pid, i + 2, 2, "%d", pids[i]);
+            mvwprintw(w_name, i + 2, 2, "%s", get_name(pids[i]));
         }
         free(pids);
     }

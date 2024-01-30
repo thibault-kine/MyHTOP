@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
+
+#define MAX_BUFFER_SIZE 256
 
 int* get_pids(int* length) {
 
@@ -46,3 +49,23 @@ int* get_pids(int* length) {
     *length = i;
     return res;
 }
+
+char* get_name(int pid) {
+    char* res = malloc(sizeof(char) * MAX_BUFFER_SIZE);
+
+    char path[MAX_BUFFER_SIZE];
+    snprintf(path, sizeof(path), "/proc/%d/comm", pid);
+
+    FILE* f = fopen(path, "r");
+    if(f != NULL) {
+        fgets(res, MAX_BUFFER_SIZE, f);
+        fclose(f);
+        res[strcspn(res, "\n")] = 0;
+    }
+    else {
+        strcpy(res, "N/A");
+    }
+
+    return res;
+}
+

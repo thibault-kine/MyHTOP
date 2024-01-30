@@ -3,4 +3,6 @@
 
 int* get_pids(int* length);
 
+char* get_name(int pid);
+
 #endif
