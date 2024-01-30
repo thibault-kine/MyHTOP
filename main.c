@@ -14,17 +14,11 @@
 #include <time.h>           // To set rand() & srand()
 #include <dirent.h>         // To explore the /proc directory
 
+#include "headers/get_proc.h"
+
 int main() {
 
-    DIR* dir;
-    struct dirent *entry;
 
-    // GET ALL PROCS
-    dir = opendir("/proc");
-    if(dir == NULL) {
-        perror("Cannot open /proc");
-        return 1;
-    }
 
     WINDOW *w_main, *w_header, *w_body;
     WINDOW *w_pid /*, *w_user, *w_status, *w_cpu, *w_mem, *w_time, *w_name */; 
@@ -85,12 +79,14 @@ int main() {
 
     // DISPLAY A LIST OF PIDs
     // TODO: put a limit so it doesn't go further than the border
-    for(int i = 1; (entry = readdir(dir)) != NULL;) {
-        int pid = atoi(entry->d_name);
-        if(pid != 0) {
-            mvwprintw(w_pid, i + 1, 2, "%d", pid);
-            i++;
+    int pid_length = 0;
+    int* pids = get_pids(&pid_length);
+
+    if(pids != NULL) {
+        for(int i = 0; i < pid_length; i++) {
+            mvwprintw(w_pid, i + 2, 2, "%d", pids[i]);
         }
+        free(pids);
     }
 
     // DISPLAY THE WINDOW BORDERS

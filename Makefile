@@ -1,7 +1,7 @@
 TARGET = my-htop.exe
 CC = gcc
 MAIN = ./main.c
-SRCS = $(MAIN)
+SRCS = $(MAIN) src/get_proc.c
 OBJS = $(SRCS:%.c=%.o)
 CFLAGS = -Wall -Wextra -Werror -lncurses -g3
 

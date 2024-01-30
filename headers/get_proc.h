@@ -1,4 +1,6 @@
 #ifndef GET_PROC_H
 #define GET_PROC_H
 
+int* get_pids(int* length);
+
 #endif
