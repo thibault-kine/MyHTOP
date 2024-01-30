@@ -3,7 +3,7 @@ CC = gcc
 MAIN = ./main.c
 SRCS = $(MAIN) src/get_proc.c
 OBJS = $(SRCS:%.c=%.o)
-VAL = valgrind --leak-check=yes --tool=memcheck --log-file=./logs.txt --vgdb=yes
+VAL = valgrind --leak-check=yes --tool=memcheck --log-file=./.log --vgdb=yes
 CFLAGS = -Wall -Wextra -Werror -lncurses -g3
 
 all: $(TARGET)
