@@ -1,7 +1,7 @@
-TARGET = my-htop.exe
+TARGET = htop.exe
 CC = gcc
 MAIN = ./main.c
-SRCS = $(MAIN) src/get_proc.c
+SRCS = $(MAIN) src/get_proc.c src/proc_types.c src/trim.c src/split.c
 OBJS = $(SRCS:%.c=%.o)
 VAL = valgrind --leak-check=yes --tool=memcheck --log-file=./.log --vgdb=yes
 CFLAGS = -Wall -Wextra -Werror -lncurses -g3

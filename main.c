@@ -15,12 +15,47 @@
 #include <dirent.h>         // To explore the /proc directory
 
 #include "headers/get_proc.h"
+#include "headers/proc_types.h"
+
+typedef struct t_pdata {
+    char* name;
+
+    int pid;
+    int ppid;
+    
+    char* state;
+    double vsize;
+    int threads;
+} pdata;
+
+/**
+ * @param key Key to press
+ * @param windows Windows to refresh
+*/
+void input_manager(char key, WINDOW** windows) {
+    switch(key) {
+        // 'esc', quit
+        case 27: 
+            endwin();
+            break;
+        
+        // refresh
+        case 'r':
+        case 'R':
+            int i = 0;
+            while(windows[i] != NULL) {
+                wrefresh(windows[i]);
+                i++;
+            }
+            break; 
+    }
+}
 
 int main() {
 
     WINDOW *w_main, *w_header, *w_body;
-    WINDOW *w_pid, /* *w_user, *w_status, *w_cpu, *w_mem, *w_time, */ *w_name; 
-    WINDOW *wl_pid, *wl_user, *wl_status, *wl_cpu, *wl_mem, *wl_time, *wl_name;
+    WINDOW *w_pid, *w_ppid, *w_state, *w_vmrss, *w_threads, *w_name; 
+    WINDOW *wl_pid, *wl_ppid, *wl_state, *wl_vmrss, *wl_threads, *wl_name;
     initscr();
     start_color();
 
@@ -53,21 +88,27 @@ int main() {
     w_header = subwin(w_main, 5, header_w, 0, (COLS - header_w) / 2);
     w_body = subwin(w_main, LINES - 5, COLS, 5, 0);
 
+    const double COL_NUM = COLS / 10;
+
     int remaining_w = 0;
     int total_w = COLS - 1;
-    int used_w = 7 * ((COLS / 10) - 2);
+    int used_w = 6 * (COL_NUM - 2);
     remaining_w = total_w - used_w;
 
-    w_pid = subwin(w_body, LINES - 5, COLS / 10, 5, 0);
-    w_name = subwin(w_body, LINES - 5, remaining_w + 2, 5, ((COLS / 10) * 6));
+    // subwin(window, h, w, ystart, xstart)
+    w_pid = subwin(w_body, LINES - 5, COL_NUM, 5, 0);
+    w_ppid = subwin(w_body, LINES - 5, (COL_NUM) + 1, 5, COL_NUM);
+    w_state = subwin(w_body, LINES - 5, (COL_NUM) + 1, 5, (COL_NUM) * 2);
+    w_vmrss = subwin(w_body, LINES - 5, (COL_NUM) + 1, 5, (COL_NUM) * 3);
+    w_threads = subwin(w_body, LINES - 5, (COL_NUM) + 1, 5, (COL_NUM) * 4);
+    w_name = subwin(w_body, LINES - 5, remaining_w + 4, 5, (COL_NUM) * 5);
 
-    wl_pid = subwin(w_body, 1, (COLS / 10) - 1, 6, 1);
-    wl_user = subwin(w_body, 1, (COLS / 10) - 1, 6, (COLS / 10) + 1);
-    wl_status = subwin(w_body, 1, (COLS / 10) - 1, 6, ((COLS / 10) * 2) + 1);
-    wl_cpu = subwin(w_body, 1, (COLS / 10) - 1, 6, ((COLS / 10) * 3) + 1);
-    wl_mem = subwin(w_body, 1, (COLS / 10) - 1, 6, ((COLS / 10) * 4) + 1);
-    wl_time = subwin(w_body, 1, (COLS / 10) - 1, 6, ((COLS / 10) * 5) + 1);
-    wl_name = subwin(w_body, 1, remaining_w, 6, ((COLS / 10) * 6) + 1);
+    wl_pid = subwin(w_body, 1, (COL_NUM) - 1, 6, 1);
+    wl_ppid = subwin(w_body, 1, (COL_NUM) - 1, 6, (COL_NUM) + 1);
+    wl_state = subwin(w_body, 1, (COL_NUM) - 1, 6, ((COL_NUM) * 2) + 1);
+    wl_vmrss = subwin(w_body, 1, (COL_NUM) - 1, 6, ((COL_NUM) * 3) + 1);
+    wl_threads = subwin(w_body, 1, (COL_NUM) - 1, 6, ((COL_NUM) * 4) + 1);
+    wl_name = subwin(w_body, 1, remaining_w + 2, 6, ((COL_NUM) * 5) + 1); 
 
     // PRINT THE TITLE + SUBTITLE
     mvwprintw(w_header, 1, (header_w - strlen(TITLE)) / 2, "%s", TITLE);
@@ -75,11 +116,10 @@ int main() {
 
     // PRINT LABELS
     mvwprintw(wl_pid, 0, 1, "PID");
-    mvwprintw(wl_user, 0, 1, "User");
-    mvwprintw(wl_status, 0, 1, "Status");
-    mvwprintw(wl_cpu, 0, 1, "CPU%%");
-    mvwprintw(wl_mem, 0, 1, "Mem%%");
-    mvwprintw(wl_time, 0, 1, "Time");
+    mvwprintw(wl_ppid, 0, 1, "PPID");
+    mvwprintw(wl_state, 0, 1, "State");
+    mvwprintw(wl_vmrss, 0, 1, "VmRSS");
+    mvwprintw(wl_threads, 0, 1, "Threads");
     mvwprintw(wl_name, 0, 1, "Name");
 
     // DISPLAY A LIST OF PIDs
@@ -89,9 +129,16 @@ int main() {
 
     // For each PID
     if(pids != NULL) {
-        for(int i = 0; i < pid_length; i++) {
-            mvwprintw(w_pid, i + 2, 2, "%d", pids[i]);
-            mvwprintw(w_name, i + 2, 2, "%s", get_name(pids[i]));
+        for(int i = 0; pids[i]; i++) {
+            pdata proc = get_data(pids[i]);
+            mvwprintw(w_pid, i + 2, 2, "%d", proc.pid);
+            mvwprintw(w_ppid, i + 2, 2, "%d", proc.ppid);
+            mvwprintw(w_name, i + 2, 2, "%s", proc.name);
+            mvwprintw(w_state, i + 2, 2, "%s", proc.state);
+            mvwprintw(w_threads, i + 2, 2, "%d", proc.threads);
+
+            double size_mb = proc.vsize / (1024 * 1024);
+            mvwprintw(w_vmrss, i + 2, 2, "%.0fMb", size_mb);
         }
         free(pids);
     }
@@ -99,23 +146,21 @@ int main() {
     // DISPLAY THE WINDOW BORDERS
     box(w_header, ACS_VLINE, ACS_HLINE);
     box(w_body, ACS_VLINE, ACS_HLINE);
+    box(w_name, ACS_VLINE, ACS_HLINE);
 
     // COLOR THE SUBWINS
     wbkgd(wl_pid, COLOR_PAIR(1));
-    wbkgd(wl_user, COLOR_PAIR(1));
-    wbkgd(wl_status, COLOR_PAIR(1));
-    wbkgd(wl_cpu, COLOR_PAIR(1));
-    wbkgd(wl_mem, COLOR_PAIR(1));
-    wbkgd(wl_time, COLOR_PAIR(1));
+    wbkgd(wl_ppid, COLOR_PAIR(1));
+    wbkgd(wl_state, COLOR_PAIR(1));
+    wbkgd(wl_vmrss, COLOR_PAIR(1));
+    wbkgd(wl_threads, COLOR_PAIR(1));
     wbkgd(wl_name, COLOR_PAIR(1));
 
-    // REFRESH THE WINDOWS
-    wrefresh(w_main);
-    wrefresh(w_header);
-    wrefresh(w_body);
-
-    getch();
-    endwin();
+    WINDOW* windows_to_refresh[] = {
+        w_name, w_pid, w_ppid, w_state, w_vmrss, w_threads
+    };
+    
+    input_manager((getch()), windows_to_refresh);
 
     free(w_main);
     free(w_header);
