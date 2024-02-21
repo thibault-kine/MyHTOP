@@ -15,41 +15,11 @@
 #include <dirent.h>         // To explore the /proc directory
 
 #include "headers/get_proc.h"
-#include "headers/proc_types.h"
 
-typedef struct t_pdata {
-    char* name;
-
-    int pid;
-    int ppid;
-    
-    char* state;
-    double vsize;
-    int threads;
-} pdata;
-
-/**
- * @param key Key to press
- * @param windows Windows to refresh
-*/
-void input_manager(char key, WINDOW** windows) {
-    switch(key) {
-        // 'esc', quit
-        case 27: 
-            endwin();
-            break;
-        
-        // refresh
-        case 'r':
-        case 'R':
-            int i = 0;
-            while(windows[i] != NULL) {
-                wrefresh(windows[i]);
-                i++;
-            }
-            break; 
-    }
-}
+enum SortBy {
+    PID,
+    VSIZE
+};
 
 int main() {
 
@@ -130,7 +100,7 @@ int main() {
     // For each PID
     if(pids != NULL) {
         for(int i = 0; pids[i]; i++) {
-            pdata proc = get_data(pids[i]);
+            pdata proc = get_process_data(pids[i]);
             mvwprintw(w_pid, i + 2, 2, "%d", proc.pid);
             mvwprintw(w_ppid, i + 2, 2, "%d", proc.ppid);
             mvwprintw(w_name, i + 2, 2, "%s", proc.name);
@@ -156,15 +126,63 @@ int main() {
     wbkgd(wl_threads, COLOR_PAIR(1));
     wbkgd(wl_name, COLOR_PAIR(1));
 
-    WINDOW* windows_to_refresh[] = {
-        w_name, w_pid, w_ppid, w_state, w_vmrss, w_threads
-    };
-    
-    input_manager((getch()), windows_to_refresh);
+    int sort = PID;
+
+    bool is_running = true;
+    while(is_running) {
+
+        char key = getch();
+
+        // [ESC] = quit
+        if(key == 27) {
+            is_running = false;
+        }
+
+        if(pids != NULL) {
+            switch(sort) {
+
+                case PID: {
+                    for(int i = 0; pids[i]; i++) {
+                        pdata proc = get_process_data(pids[i]);
+                        mvwprintw(w_pid, i + 2, 2, "%d", proc.pid);
+                        mvwprintw(w_ppid, i + 2, 2, "%d", proc.ppid);
+                        mvwprintw(w_name, i + 2, 2, "%s", proc.name);
+                        mvwprintw(w_state, i + 2, 2, "%s", proc.state);
+                        mvwprintw(w_threads, i + 2, 2, "%d", proc.threads);
+
+                        double size_mb = proc.vsize / (1024 * 1024);
+                        mvwprintw(w_vmrss, i + 2, 2, "%.0fMb", size_mb);
+                    }
+                }
+            }
+            
+            free(pids);
+        }
+
+        // [R] = refresh
+        if(key == 'r') {
+            wrefresh(w_pid);
+            wrefresh(w_ppid);
+            wrefresh(w_name);
+            wrefresh(w_state);
+            wrefresh(w_threads);
+            wrefresh(w_vmrss);
+        }
+
+        // [S] = sort by
+        if(key == 's') {
+            if(sort == PID) sort = VSIZE;
+            if(sort == VSIZE) sort = PID;
+        }
+    }
 
     free(w_main);
     free(w_header);
     free(w_body);
+
+    endwin();
+
+    system("clear");
 
     return 0;
 }

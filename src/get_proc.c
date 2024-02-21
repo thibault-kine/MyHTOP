@@ -1,5 +1,4 @@
 #include "../headers/get_proc.h"
-#include "../headers/proc_types.h"
 #include "../headers/trim.h"
 #include "../headers/split.h"
 
@@ -67,18 +66,7 @@ char* get_name(int pid) {
     return res;
 }
 
-typedef struct t_pdata {
-    char* name;
-
-    int pid;
-    int ppid;
-    
-    char* state;
-    double vsize;
-    int threads;
-} pdata;
-
-pdata get_data(int pid) {
+pdata get_process_data(int pid) {
     pdata res;
 
     char path[MAX_BUFFER_SIZE];
